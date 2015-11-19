@@ -1,5 +1,7 @@
 ﻿##  Wzorowane na przykładzie Rona Zacharskiego
 
+import numpy
+
 class Classifier:
 
     def __init__(self, filename):
@@ -17,7 +19,7 @@ class Classifier:
             vector = []
             for i in range(len(fields)):
                 if self.format[i] == 'num':
-                    vector.append(int(fields[i]))
+                    vector.append(float(fields[i]))
                 elif self.format[i] == 'comment':
                     ignore.append(fields[i])
                 elif self.format[i] == 'class':
@@ -29,41 +31,50 @@ class Classifier:
         # now normalize the data
         for i in range(self.vlen):
             self.normalizeColumn(i)
-        
-
-        
 
     def getMedian(self, alist):
         """TODO: zwraca medianę listy"""
-
-        return 0
+        return numpy.median(alist)
         
-
     def getAbsoluteStandardDeviation(self, alist, median):
         """TODO: zwraca absolutne odchylenie standardowe listy od mediany"""
-        return 0
-
+        s=0
+        for i in alist:
+            s += abs(i-median)
+        return s/len(alist)
+ 
     def normalizeColumn(self, columnNumber):
-        """TODO: mając dany nr kolumny w self.data, dokonuje normalizacji wg Modified Standard Score"""
-
-        pass
-
+        """TODO: 
+        1. mając dany nr kolumny w self.data, dokonuje normalizacji wg Modified Standard Score
+        2. zapisz medianę i odchylenie standardowe dla kolumny w self.medianAndDeviation"""
+        col = []
+        for i in range(len(self.data)):
+            col.append(self.data[i][1][columnNumber])
+        med = self.getMedian(col)
+        asd = self.getAbsoluteStandardDeviation(col, med)
+        for i in range(len(col)):
+            self.data[i][1][columnNumber] = (col[i]-med)/asd
+        self.medianAndDeviation.append([med, asd])
+                
+    def normalizeVector(self, v):
+        """Znormalizuj podany wektor mając daną medianę i odchylenie standardowe dla każdej kolumny"""
+        vector = list(v)
+        for i in range(len(vector)):
+            vector[i] = (vector[i] - self.medianAndDeviation[i][0])/self.medianAndDeviation[i][1] 
+        return vector
 
     def manhattan(self, vector1, vector2):
         """Zwraca odległość Manhattan między dwoma wektorami cech."""
         return sum(map(lambda v1, v2: abs(v1 - v2), vector1, vector2))
 
-
     def nearestNeighbor(self, itemVector):
         """return nearest neighbor to itemVector"""
-        
-        return ((0, ("TODO: Zwróc najbliższego sąsiada", [0], [])))
-    
+        return min(map(lambda vdata: [self.manhattan(itemVector,vdata[1]), vdata], self.data))
+  
     def classify(self, itemVector):
         """Return class we think item Vector is in"""
         return(self.nearestNeighbor(self.normalizeVector(itemVector))[1][0])
-        
-        
+       
 def testMedianAndASD():
     list1 = [54, 72, 78, 49, 65, 63, 75, 67, 54]
     list2 = [54, 72, 78, 49, 65, 63, 75, 67, 54, 68]
@@ -88,10 +99,10 @@ def testMedianAndASD():
     assert(round(asd4, 3) == 1.5)
     
     print("getMedian and getAbsoluteStandardDeviation work correctly")
-    
+
 def testNormalization():
     classifier = Classifier('athletesTrainingSet.txt')
-    #
+    
     #  test median and absolute standard deviation methods
     list1 = [54, 72, 78, 49, 65, 63, 75, 67, 54, 76, 68,
              61, 58, 70, 70, 70, 63, 65, 66, 61]
@@ -113,8 +124,7 @@ def testNormalization():
              [-1.2605, -0.8915], [0.7563, 0.0297], [0.7563, 1.4264],
              [0.7563, 1.4264], [-0.4202, 0.0297], [-0.084, -0.0297],
              [0.084, -0.2972], [-0.7563, -0.9212]]
-    
-
+ 
     for i in range(len(list1)):
         assert(round(classifier.data[i][1][0],4) == list1[i][0])
         assert(round(classifier.data[i][1][1],4) == list1[i][1])
@@ -152,7 +162,6 @@ def testClassifier():
     assert(classifier.classify(nl[1]) == 'Gymnastics')
     print('Classify fn OK')
     
-    
 def test(training_filename, test_filename):
     """Test the classifier on a test set of data"""
     classifier = Classifier(training_filename)
@@ -178,14 +187,11 @@ def test(training_filename, test_filename):
         print("%s  %12s  %s" % (prefix, theClass, line))
     print("%4.2f%% correct" % (numCorrect * 100/ len(lines)))
         
-
-##
 ##  Przykłady użycia
-#  test('athletesTrainingSet.txt', 'athletesTestSet.txt')
-#  test("irisTrainingSet.data", "irisTestSet.data")
-#  test("mpgTrainingSet.txt", "mpgTestSet.txt")
+test('athletesTrainingSet.txt', 'athletesTestSet.txt')
+test("irisTrainingSet.data", "irisTestSet.data")
+test("mpgTrainingSet.txt", "mpgTestSet.txt")
 
 testMedianAndASD()
-# testNormalization()
-# testClassifier()
-
+testNormalization()
+testClassifier()
